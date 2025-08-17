@@ -1,5 +1,6 @@
 package moe.uoxou.yadokari_hooks;
 
+import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
@@ -17,8 +18,15 @@ import org.spongepowered.api.event.lifecycle.ConstructPluginEvent;
 import org.spongepowered.api.event.lifecycle.RegisterCommandEvent;
 import org.spongepowered.api.event.lifecycle.StartingEngineEvent;
 import org.spongepowered.api.event.lifecycle.StoppingEngineEvent;
+import org.spongepowered.api.event.network.ServerSideConnectionEvent;
 import org.spongepowered.plugin.PluginContainer;
 import org.spongepowered.plugin.builtin.jvm.Plugin;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 @Plugin("yadokari_hooks")
 public class YadokariHooks {
@@ -37,10 +45,38 @@ public class YadokariHooks {
 		this.logger.info("Constructing yadokari-hooks");
 	}
 
+	public static final String WEBHOOK_URL = System.getenv("WEBHOOK_URL");
+
 	@Listener
 	public void onServerStarting(final StartingEngineEvent<Server> event) {
-		// Any setup per-game instance. This can run multiple times when
-		// using the integrated (singleplayer) server.
+		String jsonPayload = """
+            {
+              "content": "Hello from Java!"
+            }
+        """;
+
+		// HTTPクライアント
+		HttpResponse<String> response;
+		try (HttpClient client = HttpClient.newHttpClient()) {
+
+			// リクエスト構築
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(WEBHOOK_URL))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+					.build();
+
+			// リクエスト送信
+			try {
+				response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			} catch (IOException | InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		// レスポンス確認
+		this.logger.info("Webhook response status code: {}", response.statusCode());
+		this.logger.info("Webhook response body: {}", response.body());
 	}
 
 	@Listener
@@ -48,6 +84,36 @@ public class YadokariHooks {
 		// Any tear down per-game instance. This can run multiple times when
 		// using the integrated (singleplayer) server.
 	}
+
+	@Listener
+	public void onServerSideConnectionLogin(ServerSideConnectionEvent.Login event) {
+		JsonObject payload = new JsonObject();
+		payload.addProperty("content", "おしりからこんにちは: " + event.user().name());
+
+		// HTTPクライアント
+		HttpResponse<String> response;
+		try (HttpClient client = HttpClient.newHttpClient()) {
+
+			// リクエスト構築
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(WEBHOOK_URL))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+					.build();
+
+			// リクエスト送信
+			try {
+				response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			} catch (IOException | InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		// レスポンス確認
+		this.logger.info("Webhook response status code: {}", response.statusCode());
+		this.logger.info("Webhook response body: {}", response.body());
+	}
+
 
 	@Listener
 	public void onRegisterCommands(final RegisterCommandEvent<Command.Parameterized> event) {
