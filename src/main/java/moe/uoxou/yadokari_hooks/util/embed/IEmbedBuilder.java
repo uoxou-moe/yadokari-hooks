@@ -5,8 +5,6 @@ import com.google.gson.JsonElement;
 public interface IEmbedBuilder {
 	IEmbedBuilder setTitle(String title);
 
-	IEmbedBuilder setType(String type);
-
 	IEmbedBuilder setDescription(String description);
 
 	IEmbedBuilder setUrl(String url);

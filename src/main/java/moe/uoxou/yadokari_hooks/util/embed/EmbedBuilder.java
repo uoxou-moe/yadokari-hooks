@@ -10,7 +10,6 @@ import java.util.List;
 
 public class EmbedBuilder implements IEmbedBuilder {
 	@Nullable private String title = null;
-	@Nullable private String type = null;
 	@Nullable private String description = null;
 	@Nullable private String url = null;
 	@Nullable private String timestamp = null;
@@ -28,12 +27,6 @@ public class EmbedBuilder implements IEmbedBuilder {
 	@Override
 	public IEmbedBuilder setTitle(String title) {
 		this.title = title;
-		return this;
-	}
-
-	@Override
-	public IEmbedBuilder setType(String type) {
-		this.type = type;
 		return this;
 	}
 
@@ -108,7 +101,6 @@ public class EmbedBuilder implements IEmbedBuilder {
 		JsonObject json = new JsonObject();
 
 		if (this.title != null) json.addProperty("title", this.title);
-		if (this.type != null) json.addProperty("type", this.type);
 		if (this.description != null) json.addProperty("description", this.description);
 		if (this.url != null) json.addProperty("url", this.url);
 		if (this.timestamp != null) json.addProperty("timestamp", this.timestamp);
