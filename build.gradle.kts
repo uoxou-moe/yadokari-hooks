@@ -16,6 +16,10 @@ repositories {
     }
 }
 
+dependencies {
+    compileOnly("org.jetbrains:annotations:26.0.2")
+}
+
 sponge {
     apiVersion("13.0.0")
     license("All-Rights-Reserved")

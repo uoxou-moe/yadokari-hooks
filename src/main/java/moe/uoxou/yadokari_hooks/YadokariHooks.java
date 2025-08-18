@@ -1,24 +1,35 @@
 package moe.uoxou.yadokari_hooks;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.inject.Inject;
+import moe.uoxou.yadokari_hooks.util.embed.EmbedAuthorBuilder;
+import moe.uoxou.yadokari_hooks.util.embed.EmbedBuilder;
+import moe.uoxou.yadokari_hooks.util.embed.EmbedFooterBuilder;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.LinearComponents;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.api.Server;
 import org.spongepowered.api.command.Command;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.parameter.Parameter;
+import org.spongepowered.api.entity.living.Humanoid;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.lifecycle.ConstructPluginEvent;
 import org.spongepowered.api.event.lifecycle.RegisterCommandEvent;
 import org.spongepowered.api.event.lifecycle.StartingEngineEvent;
 import org.spongepowered.api.event.lifecycle.StoppingEngineEvent;
+import org.spongepowered.api.event.message.AudienceMessageEvent;
+import org.spongepowered.api.event.message.PlayerChatEvent;
+import org.spongepowered.api.event.message.SystemMessageEvent;
 import org.spongepowered.api.event.network.ServerSideConnectionEvent;
+import org.spongepowered.api.util.Nameable;
 import org.spongepowered.plugin.PluginContainer;
 import org.spongepowered.plugin.builtin.jvm.Plugin;
 
@@ -45,15 +56,13 @@ public class YadokariHooks {
 		this.logger.info("Constructing yadokari-hooks");
 	}
 
-	public static final String WEBHOOK_URL = System.getenv("WEBHOOK_URL");
-
 	@Listener
 	public void onServerStarting(final StartingEngineEvent<Server> event) {
 		String jsonPayload = """
-            {
-              "content": "Hello from Java!"
-            }
-        """;
+				    {
+				      "content": "Hello from Java!"
+				    }
+				""";
 
 		// HTTPクライアント
 		HttpResponse<String> response;
@@ -114,6 +123,38 @@ public class YadokariHooks {
 		this.logger.info("Webhook response body: {}", response.body());
 	}
 
+	@Listener
+	public void onPlayerChat(PlayerChatEvent.Submit event) {
+		JsonObject payload = new JsonObject();
+		JsonElement embed = new EmbedBuilder()
+				.setDescription(PlainTextComponentSerializer.plainText().serialize(event.message()))
+				.setColor(0x00FF00) // 緑色
+				.setFooter(new EmbedFooterBuilder()
+						.setText(event.player().map(Nameable::name).orElse(null))
+						.setIconUrl(event.player().map(p -> "https://minotar.net/helm/" + p.uniqueId().toString().replace("-", "")).orElse(""))
+				)
+				.build();
+		JsonArray embeds = new JsonArray();
+		embeds.add(embed);
+		payload.add("embeds", embeds);
+
+		sendWebhookRequest(payload);
+	}
+
+	@Listener
+	public void onSystemMessage(SystemMessageEvent event) {
+		JsonObject payload = new JsonObject();
+		JsonElement embed = new EmbedBuilder()
+				.setDescription(PlainTextComponentSerializer.plainText().serialize(event.message()))
+				.setColor(0x0000FF) // 青色
+				.build();
+		JsonArray embeds = new JsonArray();
+		embeds.add(embed);
+		payload.add("embeds", embeds);
+
+		sendWebhookRequest(payload);
+	}
+
 
 	@Listener
 	public void onRegisterCommands(final RegisterCommandEvent<Command.Parameterized> event) {
@@ -126,5 +167,21 @@ public class YadokariHooks {
 
 			return CommandResult.success();
 		}).build(), "greet", "wave");
+	}
+
+	public static final String WEBHOOK_URL = System.getenv("WEBHOOK_URL");
+
+	private static HttpResponse<String> sendWebhookRequest(JsonObject payload) {
+		try (HttpClient client = HttpClient.newHttpClient()) {
+			HttpRequest request = HttpRequest.newBuilder()
+					.uri(URI.create(WEBHOOK_URL))
+					.header("Content-Type", "application/json")
+					.POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
+					.build();
+
+			return client.send(request, HttpResponse.BodyHandlers.ofString());
+		} catch (IOException | InterruptedException e) {
+			throw new RuntimeException(e);
+		}
 	}
 }
