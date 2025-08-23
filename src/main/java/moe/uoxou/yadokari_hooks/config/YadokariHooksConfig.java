@@ -65,13 +65,33 @@ public class YadokariHooksConfig {
 	public static class Hook {
 		@Setting("url") @Required private URL url;
 		@Setting("on-server-start") private OnServerStart onServerStart = new OnServerStart();
+		@Setting("on-server-stop") private OnServerStop onServerStop = new OnServerStop();
+		@Setting("on-player-join") private OnPlayerJoin onPlayerJoin = new OnPlayerJoin();
+		@Setting("on-player-leave") private OnPlayerLeave onPlayerLeave = new OnPlayerLeave();
+		@Setting("on-player-chat") private OnPlayerChat onPlayerChat = new OnPlayerChat();
 
 		public URL url() {
-			return url;
+			return this.url;
 		}
 
 		public OnServerStart onServerStart() {
-			return onServerStart;
+			return this.onServerStart;
+		}
+
+		public OnServerStop onServerStop() {
+			return this.onServerStop;
+		}
+
+		public OnPlayerJoin onPlayerJoin() {
+			return this.onPlayerJoin;
+		}
+
+		public OnPlayerLeave onPlayerLeave() {
+			return this.onPlayerLeave;
+		}
+
+		public OnPlayerChat onPlayerChat() {
+			return this.onPlayerChat;
 		}
 	}
 
@@ -80,7 +100,43 @@ public class YadokariHooksConfig {
 		@Setting("enabled") private boolean enabled = true;
 
 		public boolean enabled() {
-			return enabled;
+			return this.enabled;
+		}
+	}
+
+	@ConfigSerializable
+	public static class OnServerStop {
+		@Setting("enabled") private boolean enabled = true;
+
+		public boolean enabled() {
+			return this.enabled;
+		}
+	}
+
+	@ConfigSerializable
+	public static class OnPlayerJoin {
+		@Setting("enabled") private boolean enabled = true;
+
+		public boolean enabled() {
+			return this.enabled;
+		}
+	}
+
+	@ConfigSerializable
+	public static class OnPlayerLeave {
+		@Setting("enabled") private boolean enabled = true;
+
+		public boolean enabled() {
+			return this.enabled;
+		}
+	}
+
+	@ConfigSerializable
+	public static class OnPlayerChat {
+		@Setting("enabled") private boolean enabled = true;
+
+		public boolean enabled() {
+			return this.enabled;
 		}
 	}
 }
