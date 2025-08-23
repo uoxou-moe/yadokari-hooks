@@ -3,6 +3,7 @@ package moe.uoxou.yadokari_hooks;
 import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import moe.uoxou.yadokari_hooks.config.YadokariHooksConfig;
+import moe.uoxou.yadokari_hooks.send.WebhookSender;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.LinearComponents;
@@ -40,6 +41,7 @@ public class YadokariHooks {
 	private final Path configPath;
 	private final Logger logger;
 	private final YadokariHooksConfig config;
+	private final WebhookSender webhookSender;
 
 	@Inject
 	public YadokariHooks(
@@ -51,26 +53,22 @@ public class YadokariHooks {
 		this.configPath = configPath;
 		this.logger = logger;
 		this.config = new YadokariHooksConfig(configPath, logger);
+		this.webhookSender = new WebhookSender(() -> this.config, () -> this.logger);
 	}
 
 	@Listener
 	public void onServerStarting(final StartingEngineEvent<Server> event) {
-		this.config.getHooks().stream().filter(c -> c.onServerStart().enabled()).forEach(hook -> {
-			JsonObject payload = new JsonObject();
-			payload.addProperty("content", "サーバーが起動しました");
-
-			try {
-				sendWebhookRequest(hook.url(), payload);
-			} catch (Exception e) {
-				this.logger.error("Failed to send webhook request: {}", e.getMessage(), e);
-			}
-		});
+		this.webhookSender.onServerStart(event);
 	}
 
 	@Listener
 	public void onServerStopping(final StoppingEngineEvent<Server> event) {
-		// Any tear down per-game instance. This can run multiple times when
-		// using the integrated (singleplayer) server.
+		this.config.getHooks().stream().filter(c -> c.onServerStart().enabled()).forEach(hook -> {
+			JsonObject payload = new JsonObject();
+			payload.addProperty("content", "サーバーが起動しました");
+
+			sendWebhookRequest(hook.url(), payload);
+		});
 	}
 
 	@Listener
