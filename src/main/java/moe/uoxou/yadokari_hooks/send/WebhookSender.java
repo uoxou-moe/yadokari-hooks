@@ -204,8 +204,8 @@ public final class WebhookSender {
 				.setDescription(PlainTextComponentSerializer.plainText().serialize(event.message()))
 				.setTimestamp(Instant.now().toString());
 		event.player().ifPresent(player -> {
-			embed.setAuthor(new EmbedAuthorBuilder()
-					.setName(player.name())
+			embed.setFooter(new EmbedFooterBuilder()
+					.setText(player.name())
 					.setIconUrl("https://minotar.net/helm/" + player.uniqueId().toString()));
 		});
 		JsonArray embeds = new JsonArray();
