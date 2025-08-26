@@ -105,8 +105,7 @@ public final class WebhookSender {
 				data.addProperty("version", event.game().platform().minecraftVersion().name());
 				data.addProperty("host", host.orElse("Unknown"));
 				data.addProperty("port", port.map(String::valueOf).orElse("Unknown"));
-				data.addProperty("impl_name", event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().name().orElse("Unknown"));
-				data.addProperty("impl_version", event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().version().toString());
+				data.add("implementation", PayloadHelpers.createPluginPayload(event.game().platform().container(Platform.Component.IMPLEMENTATION)));
 
 				return createPayload(Event.SERVER_START, new Date(), data);
 			}
@@ -162,8 +161,7 @@ public final class WebhookSender {
 		switch (format) {
 			case GENERIC: {
 				JsonObject data = new JsonObject();
-				data.addProperty("player_name", event.player().name());
-				data.addProperty("player_uuid", event.player().uniqueId().toString());
+				data.add("player", PayloadHelpers.createPlayerPayload(event.player()));
 				return createPayload(Event.PLAYER_JOIN, new Date(), data);
 			}
 			case DISCORD: {
@@ -186,8 +184,7 @@ public final class WebhookSender {
 		switch (format) {
 			case GENERIC: {
 				JsonObject data = new JsonObject();
-				data.addProperty("player_name", event.player().name());
-				data.addProperty("player_uuid", event.player().uniqueId().toString());
+				data.add("player", PayloadHelpers.createPlayerPayload(event.player()));
 				return createPayload(Event.PLAYER_LEAVE, new Date(), data);
 			}
 			case DISCORD: {
@@ -210,8 +207,7 @@ public final class WebhookSender {
 		switch (format) {
 			case GENERIC: {
 				JsonObject data = new JsonObject();
-				event.player().ifPresent(player -> data.addProperty("player_name", player.name()));
-				event.player().ifPresent(player -> data.addProperty("player_uuid", player.uniqueId().toString()));
+				event.player().ifPresent(player -> data.add("player", PayloadHelpers.createPlayerPayload(player)));
 				data.addProperty("message", PlainTextComponentSerializer.plainText().serialize(event.message()));
 				return createPayload(Event.PLAYER_CHAT, new Date(), data);
 			}
