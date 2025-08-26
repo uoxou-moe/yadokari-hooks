@@ -69,6 +69,7 @@ public class YadokariHooksConfig {
 		@Setting("on-player-join") private OnPlayerJoin onPlayerJoin = new OnPlayerJoin();
 		@Setting("on-player-leave") private OnPlayerLeave onPlayerLeave = new OnPlayerLeave();
 		@Setting("on-player-chat") private OnPlayerChat onPlayerChat = new OnPlayerChat();
+		@Setting("format") private Format format = Format.GENERIC;
 
 		public URL url() {
 			return this.url;
@@ -92,6 +93,10 @@ public class YadokariHooksConfig {
 
 		public OnPlayerChat onPlayerChat() {
 			return this.onPlayerChat;
+		}
+
+		public Format format() {
+			return this.format;
 		}
 	}
 
@@ -138,5 +143,10 @@ public class YadokariHooksConfig {
 		public boolean enabled() {
 			return this.enabled;
 		}
+	}
+
+	public enum Format {
+		GENERIC,
+		DISCORD
 	}
 }

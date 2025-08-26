@@ -1,13 +1,11 @@
 package moe.uoxou.yadokari_hooks.send;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import moe.uoxou.yadokari_hooks.config.YadokariHooksConfig;
 import moe.uoxou.yadokari_hooks.util.embed.*;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.Nullable;
 import org.spongepowered.api.Platform;
 import org.spongepowered.api.Server;
 import org.spongepowered.api.event.lifecycle.StartedEngineEvent;
@@ -24,15 +22,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 public final class WebhookSender {
 	private final Supplier<YadokariHooksConfig> config;
-	private final Supplier<Logger> logger;
+	@SuppressWarnings("unused") private final Supplier<Logger> logger;
 
 	public WebhookSender(Supplier<YadokariHooksConfig> config, Supplier<Logger> logger) {
 		this.config = config;
@@ -57,9 +54,8 @@ public final class WebhookSender {
 		this.config.get().getHooks().stream()
 				.filter(c -> c.onServerStart().enabled())
 				.forEach(hook -> {
-					JsonObject payload = createPayload(event);
-					HttpResponse<String> response = sendWebhook(hook.url(), payload);
-					this.logger.get().info("Sent webhook to {}: {} - {}", hook.url(), response.statusCode(), response.body());
+					JsonObject payload = createPayload(event, hook.format());
+					sendWebhook(hook.url(), payload);
 				});
 	}
 
@@ -67,9 +63,8 @@ public final class WebhookSender {
 		this.config.get().getHooks().stream()
 				.filter(c -> c.onServerStop().enabled())
 				.forEach(hook -> {
-					JsonObject payload = createPayload(event);
-					HttpResponse<String> response = sendWebhook(hook.url(), payload);
-					this.logger.get().info("Sent webhook to {}: {} - {}", hook.url(), response.statusCode(), response.body());
+					JsonObject payload = createPayload(event, hook.format());
+					sendWebhook(hook.url(), payload);
 				});
 	}
 
@@ -77,9 +72,8 @@ public final class WebhookSender {
 		this.config.get().getHooks().stream()
 				.filter(c -> c.onPlayerJoin().enabled())
 				.forEach(hook -> {
-					JsonObject payload = createPayload(event);
-					HttpResponse<String> response = sendWebhook(hook.url(), payload);
-					this.logger.get().info("Sent webhook to {}: {} - {}", hook.url(), response.statusCode(), response.body());
+					JsonObject payload = createPayload(event, hook.format());
+					sendWebhook(hook.url(), payload);
 				});
 	}
 
@@ -87,9 +81,8 @@ public final class WebhookSender {
 		this.config.get().getHooks().stream()
 				.filter(c -> c.onPlayerLeave().enabled())
 				.forEach(hook -> {
-					JsonObject payload = createPayload(event);
-					HttpResponse<String> response = sendWebhook(hook.url(), payload);
-					this.logger.get().info("Sent webhook to {}: {} - {}", hook.url(), response.statusCode(), response.body());
+					JsonObject payload = createPayload(event, hook.format());
+					sendWebhook(hook.url(), payload);
 				});
 	}
 
@@ -97,133 +90,161 @@ public final class WebhookSender {
 		this.config.get().getHooks().stream()
 				.filter(c -> c.onPlayerChat().enabled())
 				.forEach(hook -> {
-					JsonObject payload = createPayload(event);
-					HttpResponse<String> response = sendWebhook(hook.url(), payload);
-					this.logger.get().info("Sent webhook to {}: {} - {}", hook.url(), response.statusCode(), response.body());
+					JsonObject payload = createPayload(event, hook.format());
+					sendWebhook(hook.url(), payload);
 				});
 	}
 
-	public static JsonObject createPayload(StartedEngineEvent<Server> event) {
+	public static JsonObject createPayload(StartedEngineEvent<Server> event, YadokariHooksConfig.Format format) {
 		Optional<String> host = event.engine().boundAddress().map(InetSocketAddress::getHostString);
 		Optional<Integer> port = event.engine().boundAddress().map(InetSocketAddress::getPort);
 
-		JsonObject data = new JsonObject();
-		Map<String, JsonElement> forDiscord = new HashMap<>();
-		IEmbedBuilder embed = new EmbedBuilder()
-				.setTitle("✅ サーバーが起動しました")
-				.setColor(0x008000)
-				.setTimestamp(Instant.now().toString())
-				.addField(new EmbedFieldBuilder()
-						.setName("Version")
-						.setValue(event.game().platform().minecraftVersion().name()))
-				.addField(new EmbedFieldBuilder()
-						.setName("Host")
-						.setValue(host.orElse("Unknown")))
-				.addField(new EmbedFieldBuilder()
-						.setName("Port")
-						.setValue(port.map(String::valueOf).orElse("Unknown")))
-				.addField(new EmbedFieldBuilder()
-						.setName("Impl Name")
-						.setValue(event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().name().orElse("Unknown"))
-						.setInline(true))
-				.addField(new EmbedFieldBuilder()
-						.setName("Impl Version")
-						.setValue(event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().version().toString())
-						.setInline(true));
-		JsonArray embeds = new JsonArray();
-		embeds.add(embed.build());
-		forDiscord.put("embeds", embeds);
+		switch (format) {
+			case GENERIC: {
+				JsonObject data = new JsonObject();
+				data.addProperty("version", event.game().platform().minecraftVersion().name());
+				data.addProperty("host", host.orElse("Unknown"));
+				data.addProperty("port", port.map(String::valueOf).orElse("Unknown"));
+				data.addProperty("impl_name", event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().name().orElse("Unknown"));
+				data.addProperty("impl_version", event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().version().toString());
 
-		return createPayload(Event.SERVER_START, new Date(), data, forDiscord);
+				return createPayload(Event.SERVER_START, new Date(), data);
+			}
+			case DISCORD: {
+				IEmbedBuilder embed = new EmbedBuilder().setTitle("✅ サーバーが起動しました")
+						.setColor(0x008000)
+						.setTimestamp(Instant.now().toString())
+						.addField(new EmbedFieldBuilder()
+								.setName("Version")
+								.setValue(event.game().platform().minecraftVersion().name()))
+						.addField(new EmbedFieldBuilder()
+								.setName("Host")
+								.setValue(host.orElse("Unknown")))
+						.addField(new EmbedFieldBuilder()
+								.setName("Port")
+								.setValue(port.map(String::valueOf).orElse("Unknown")))
+						.addField(new EmbedFieldBuilder()
+								.setName("Impl Name")
+								.setValue(event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().name().orElse("Unknown"))
+								.setInline(true))
+						.addField(new EmbedFieldBuilder()
+								.setName("Impl Version")
+								.setValue(event.game().platform().container(Platform.Component.IMPLEMENTATION).metadata().version().toString())
+								.setInline(true));
+
+				return createDiscordPayload(embed);
+			}
+			default:
+				throw new IllegalArgumentException("Unknown format: " + format);
+		}
 	}
 
-	public static JsonObject createPayload(StoppingEngineEvent<Server> event) {
-		JsonObject data = new JsonObject();
-		Map<String, JsonElement> forDiscord = new HashMap<>();
-		IEmbedBuilder embed = new EmbedBuilder()
-				.setTitle("❌ サーバーが停止しました")
-				.setColor(0x008000)
-				.setTimestamp(Instant.now().toString());
-		JsonArray embeds = new JsonArray();
-		embeds.add(embed.build());
-		forDiscord.put("embeds", embeds);
-
-		return createPayload(Event.SERVER_STOP, new Date(), data, forDiscord);
+	public static JsonObject createPayload(StoppingEngineEvent<Server> event, YadokariHooksConfig.Format format) {
+		switch (format) {
+			case GENERIC: {
+				JsonObject data = new JsonObject();
+				// 必要な情報を data に追加
+				return createPayload(Event.SERVER_STOP, new Date(), data);
+			}
+			case DISCORD: {
+				IEmbedBuilder embed = new EmbedBuilder()
+						.setTitle("❌ サーバーが停止しました")
+						.setColor(0x008000)
+						.setTimestamp(Instant.now().toString());
+				return createDiscordPayload(embed);
+			}
+			default:
+				throw new IllegalArgumentException("Unknown format: " + format);
+		}
 	}
 
-	public static JsonObject createPayload(ServerSideConnectionEvent.Join event) {
-		JsonObject data = new JsonObject();
-		data.addProperty("player_name", event.player().name());
-		data.addProperty("player_uuid", event.player().uniqueId().toString());
-
-		Map<String, JsonElement> forDiscord = new HashMap<>();
-		IEmbedBuilder embed = new EmbedBuilder()
-				.setTitle("🙌 " + event.player().name() + " さんがサーバーに参加しました")
-				.setColor(Color.CYAN.rgb())
-				.setThumbnail(new EmbedImageBuilder()
-						.setUrl("https://minotar.net/helm/" + event.player().uniqueId().toString() + "/20.png")
-						.setHeight(50)
-						.setWidth(50))
-				.setTimestamp(Instant.now().toString());
-		JsonArray embeds = new JsonArray();
-		embeds.add(embed.build());
-		forDiscord.put("embeds", embeds);
-
-		return createPayload(Event.PLAYER_JOIN, new Date(), data, forDiscord);
+	public static JsonObject createPayload(ServerSideConnectionEvent.Join event, YadokariHooksConfig.Format format) {
+		switch (format) {
+			case GENERIC: {
+				JsonObject data = new JsonObject();
+				data.addProperty("player_name", event.player().name());
+				data.addProperty("player_uuid", event.player().uniqueId().toString());
+				return createPayload(Event.PLAYER_JOIN, new Date(), data);
+			}
+			case DISCORD: {
+				IEmbedBuilder embed = new EmbedBuilder()
+						.setTitle("🙌 " + event.player().name() + " さんがサーバーに参加しました")
+						.setColor(Color.CYAN.rgb())
+						.setThumbnail(new EmbedImageBuilder()
+								.setUrl("https://minotar.net/helm/" + event.player().uniqueId().toString() + "/20.png")
+								.setHeight(50)
+								.setWidth(50))
+						.setTimestamp(Instant.now().toString());
+				return createDiscordPayload(embed);
+			}
+			default:
+				throw new IllegalArgumentException("Unknown format: " + format);
+		}
 	}
 
-	public static JsonObject createPayload(ServerSideConnectionEvent.Leave event) {
-		JsonObject data = new JsonObject();
-		data.addProperty("player_name", event.player().name());
-		data.addProperty("player_uuid", event.player().uniqueId().toString());
-
-		Map<String, JsonElement> forDiscord = new HashMap<>();
-		IEmbedBuilder embed = new EmbedBuilder()
-				.setTitle("👋 " + event.player().name() + " さんがサーバーから退出しました")
-				.setColor(Color.CYAN.rgb())
-				.setThumbnail(new EmbedImageBuilder()
-						.setUrl("https://minotar.net/helm/" + event.player().uniqueId().toString() + "/20.png")
-						.setHeight(50)
-						.setWidth(50))
-				.setTimestamp(Instant.now().toString());
-		JsonArray embeds = new JsonArray();
-		embeds.add(embed.build());
-		forDiscord.put("embeds", embeds);
-
-		return createPayload(Event.PLAYER_LEAVE, new Date(), data, forDiscord);
+	public static JsonObject createPayload(ServerSideConnectionEvent.Leave event, YadokariHooksConfig.Format format) {
+		switch (format) {
+			case GENERIC: {
+				JsonObject data = new JsonObject();
+				data.addProperty("player_name", event.player().name());
+				data.addProperty("player_uuid", event.player().uniqueId().toString());
+				return createPayload(Event.PLAYER_LEAVE, new Date(), data);
+			}
+			case DISCORD: {
+				IEmbedBuilder embed = new EmbedBuilder()
+						.setTitle("👋 " + event.player().name() + " さんがサーバーから退出しました")
+						.setColor(Color.CYAN.rgb())
+						.setThumbnail(new EmbedImageBuilder()
+								.setUrl("https://minotar.net/helm/" + event.player().uniqueId().toString() + "/20.png")
+								.setHeight(50)
+								.setWidth(50))
+						.setTimestamp(Instant.now().toString());
+				return createDiscordPayload(embed);
+			}
+			default:
+				throw new IllegalArgumentException("Unknown format: " + format);
+		}
 	}
 
-	public static JsonObject createPayload(PlayerChatEvent.Submit event) {
-		JsonObject data = new JsonObject();
-		event.player().ifPresent(player -> data.addProperty("player_name", player.name()));
-		event.player().ifPresent(player -> data.addProperty("player_uuid", player.uniqueId().toString()));
-		data.addProperty("message", PlainTextComponentSerializer.plainText().serialize(event.message()));
-
-		Map<String, JsonElement> forDiscord = new HashMap<>();
-		IEmbedBuilder embed = new EmbedBuilder()
-				.setDescription(PlainTextComponentSerializer.plainText().serialize(event.message()))
-				.setTimestamp(Instant.now().toString());
-		event.player().ifPresent(player -> {
-			embed.setFooter(new EmbedFooterBuilder()
-					.setText(player.name())
-					.setIconUrl("https://minotar.net/helm/" + player.uniqueId().toString()));
-		});
-		JsonArray embeds = new JsonArray();
-		embeds.add(embed.build());
-		forDiscord.put("embeds", embeds);
-
-		return createPayload(Event.PLAYER_CHAT, new Date(), data, forDiscord);
+	public static JsonObject createPayload(PlayerChatEvent.Submit event, YadokariHooksConfig.Format format) {
+		switch (format) {
+			case GENERIC: {
+				JsonObject data = new JsonObject();
+				event.player().ifPresent(player -> data.addProperty("player_name", player.name()));
+				event.player().ifPresent(player -> data.addProperty("player_uuid", player.uniqueId().toString()));
+				data.addProperty("message", PlainTextComponentSerializer.plainText().serialize(event.message()));
+				return createPayload(Event.PLAYER_CHAT, new Date(), data);
+			}
+			case DISCORD: {
+				IEmbedBuilder embed = new EmbedBuilder()
+						.setDescription(PlainTextComponentSerializer.plainText().serialize(event.message()))
+						.setTimestamp(Instant.now().toString());
+				event.player().ifPresent(player -> embed.setFooter(new EmbedFooterBuilder()
+						.setText(player.name())
+						.setIconUrl("https://minotar.net/helm/" + player.uniqueId().toString())));
+				return createDiscordPayload(embed);
+			}
+			default:
+				throw new IllegalArgumentException("Unknown format: " + format);
+		}
 	}
 
-	public static JsonObject createPayload(Event event, Date timestamp, JsonElement data, @Nullable Map<String, JsonElement> extra) {
+	public static JsonObject createPayload(Event event, Date timestamp, JsonElement data) {
 		JsonObject payload = new JsonObject();
 
 		payload.addProperty("event", event.getValue());
 		payload.addProperty("timestamp", timestamp.toString());
 		payload.add("data", data);
-		if (extra != null) {
-			extra.forEach(payload::add);
-		}
+
+		return payload;
+	}
+
+	public static JsonObject createDiscordPayload(IEmbedBuilder... embeds) {
+		JsonObject payload = new JsonObject();
+		Arrays.stream(embeds).forEach(embed -> embed.setTimestamp(Instant.now().toString()));
+		payload.add("embeds", Arrays.stream(embeds)
+				.map(IEmbedBuilder::build)
+				.collect(com.google.gson.JsonArray::new, com.google.gson.JsonArray::add, com.google.gson.JsonArray::addAll));
 
 		return payload;
 	}
