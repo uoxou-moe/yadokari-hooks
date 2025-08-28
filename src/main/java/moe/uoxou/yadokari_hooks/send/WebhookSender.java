@@ -110,7 +110,7 @@ public final class WebhookSender {
 				return createPayload(Event.SERVER_START, new Date(), data);
 			}
 			case DISCORD: {
-				IEmbedBuilder embed = new EmbedBuilder().setTitle("✅ サーバーが起動しました")
+				IEmbedBuilder embed = new EmbedBuilder().setTitle("✅ Server Started")
 						.setColor(0x008000)
 						.setTimestamp(Instant.now().toString())
 						.addField(new EmbedFieldBuilder()
@@ -147,7 +147,7 @@ public final class WebhookSender {
 			}
 			case DISCORD: {
 				IEmbedBuilder embed = new EmbedBuilder()
-						.setTitle("❌ サーバーが停止しました")
+						.setTitle("❌ Server Stopped")
 						.setColor(0x008000)
 						.setTimestamp(Instant.now().toString());
 				return createDiscordPayload(embed);
@@ -166,7 +166,7 @@ public final class WebhookSender {
 			}
 			case DISCORD: {
 				IEmbedBuilder embed = new EmbedBuilder()
-						.setTitle("🙌 " + event.player().name() + " さんがサーバーに参加しました")
+						.setTitle("🙌 " + event.player().name() + " has joined the server")
 						.setColor(Color.CYAN.rgb())
 						.setThumbnail(new EmbedImageBuilder()
 								.setUrl("https://minotar.net/helm/" + event.player().uniqueId().toString() + "/20.png")
@@ -189,7 +189,7 @@ public final class WebhookSender {
 			}
 			case DISCORD: {
 				IEmbedBuilder embed = new EmbedBuilder()
-						.setTitle("👋 " + event.player().name() + " さんがサーバーから退出しました")
+						.setTitle("👋 " + event.player().name() + " has left the server")
 						.setColor(Color.CYAN.rgb())
 						.setThumbnail(new EmbedImageBuilder()
 								.setUrl("https://minotar.net/helm/" + event.player().uniqueId().toString() + "/20.png")

@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "moe.uoxou"
-version = "1.0"
+version = "1.0.0-S13.0"
 
 repositories {
     mavenCentral()
@@ -28,6 +28,7 @@ sponge {
         version("1.0")
     }
     plugin("yadokari_hooks") {
+        version(project.version.toString())
         displayName("Yadokari Hooks 🌠")
         entrypoint("moe.uoxou.yadokari_hooks.YadokariHooks")
         description("🌠")
