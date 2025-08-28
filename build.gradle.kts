@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "moe.uoxou"
-version = "1.0.0-S13.0"
+version = "1.0.0-S13.0.0"
 
 repositories {
     mavenCentral()
